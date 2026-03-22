@@ -1,4 +1,4 @@
-BASE_URL = "https://josaa.nic.in/"
+BASE_URL = "https://josaa.admissions.nic.in/Applicant/seatallotmentresult/currentorcr.aspx"
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0",
@@ -9,7 +9,6 @@ RETRY_COUNT = 3
 TIMEOUT = 10
 
 DROPDOWNS = [
-    "ctl00$ContentPlaceHolder1$ddlYear",
     "ctl00$ContentPlaceHolder1$ddlRoundNo",
     "ctl00$ContentPlaceHolder1$ddlInstituteType",
     "ctl00$ContentPlaceHolder1$ddlInstitute",
