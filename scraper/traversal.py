@@ -1,6 +1,7 @@
 import logging
 from .session import SessionManager
-from .parser import parse_dropdown
+from .parser import parse_dropdown, parse_table
+from .config import DROPDOWNS
 
 log = logging.getLogger(__name__)
 
@@ -8,29 +9,41 @@ log = logging.getLogger(__name__)
 class TraversalEngine:
 
     def __init__(self):
-            self.session = SessionManager()
+        self.session = SessionManager()
 
-                def run(self, select_name: str):
-                        log.info("Loading initial page...")
-                                soup = self.session.load()
-                                        self._traverse_first_level(soup, select_name)
+    def run(self):
+        log.info("Loading initial page...")
+        soup = self.session.load()
+        return self._traverse(soup, level=0, selections={})
 
-                                            def _traverse_first_level(self, soup, select_name: str):
-                                                    options = parse_dropdown(soup, select_name)
+    def _traverse(self, soup, level: int, selections: dict):
+        if level >= len(DROPDOWNS):
+            records = parse_table(soup)
+            log.info("Extracted %d rows.", len(records))
+            return records
 
-                                                            if not options:
-                                                                        log.warning("No options found in dropdown: %s", select_name)
-                                                                                    return
+        select_name = DROPDOWNS[level]
+        options = parse_dropdown(soup, select_name)
 
-                                                                                            log.info("Found %d options in '%s'.", len(options), select_name)
+        if not options:
+            log.warning("Level %d — no options in '%s', skipping.", level, select_name)
+            return []
 
-                                                                                                    for value, text in options:
-                                                                                                                log.info("Processing: %s", text)
+        log.info("Level %d — '%s' has %d options.", level, select_name, len(options))
 
-                                                                                                                            updated_soup = self.session.postback(
-                                                                                                                                            event_target=select_name,
-                                                                                                                                                            selections={select_name: value},
-                                                                                                                                                                        )
+        results = []
 
-                                                                                                                                                                                    # Placeholder for next level traversal.
-                                                                                                                                                                                                _ = updated_soup
+        for value, text in options:
+            log.info("Level %d — selecting: %s", level, text)
+
+            updated_selections = {**selections, select_name: value}
+
+            updated_soup = self.session.postback(
+                event_target=select_name,
+                selections={select_name: value},
+            )
+
+            child_results = self._traverse(updated_soup, level + 1, updated_selections)
+            results.extend(child_results)
+
+        return results
