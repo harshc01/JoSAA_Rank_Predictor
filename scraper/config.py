@@ -7,3 +7,12 @@ HEADERS = {
 
         RETRY_COUNT = 3
         TIMEOUT = 10
+DROPDOWNS = [
+    "ctl00$ContentPlaceHolder1$ddlYear",
+    "ctl00$ContentPlaceHolder1$ddlRoundNo",
+    "ctl00$ContentPlaceHolder1$ddlInstituteType",
+    "ctl00$ContentPlaceHolder1$ddlInstitute",
+    "ctl00$ContentPlaceHolder1$ddlBranch",
+    "ctl00$ContentPlaceHolder1$ddlSeatType",
+    "ctl00$ContentPlaceHolder1$ddlGender",
+]
