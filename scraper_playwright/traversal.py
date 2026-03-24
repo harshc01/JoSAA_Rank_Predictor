@@ -21,13 +21,17 @@ class PlaywrightTraversal:
 
             results = []
 
-            #first dropdown
-            page.wait_for_selector("#ctl00_ContentPlaceHolder1_ddlRoundNo")
+            page.wait_for_load_state("networkidle")
+            page.wait_for_timeout(5000)
 
-            rounds = page.locator("#ctl00_ContentPlaceHolder1_ddlRoundNo option")
+            round_dropdown = page.locator("select").first
+            rounds = round_dropdown.locator("option")
+
+            for i in range(min(5, rounds.count())):
+                print(rounds.nth(i).inner_text())
 
             for i in range(1, rounds.count()):
-                page.select_option("#ctl00_ContentPlaceHolder1_ddlRoundNo", index=i)
+                round_dropdown.select_option(index=i)
 
                 page.wait_for_selector("#ctl00_ContentPlaceHolder1_ddlInstituteType")
 
