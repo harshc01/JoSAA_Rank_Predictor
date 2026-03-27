@@ -1,5 +1,4 @@
 import logging
-import time
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright, Page, TimeoutError as PWTimeout
 
@@ -11,11 +10,9 @@ log = logging.getLogger(__name__)
 URL = "https://josaa.admissions.nic.in/Applicant/seatallotmentresult/currentorcr.aspx"
 OUTPUT_PATH = "data/output.csv"
 
-DROPDOWN_COUNT = 6      # round → inst_type → institute → branch → seat → gender
-LEAF_LEVEL = 5          # gender is the last dropdown; table appears after this
-SELECT_WAIT_MS = 1500   # ms to wait after each selection for page to update
-SAVE_EVERY = 500        # flush to CSV every N records to guard against crashes
-
+LEAF_LEVEL = 5
+SAVE_EVERY = 500
+NETWORK_TIMEOUT = 30_000
 
 def _get_options(page: Page, nth: int) -> list[int]:
     """
@@ -28,9 +25,19 @@ def _get_options(page: Page, nth: int) -> list[int]:
 
 
 def _select(page: Page, nth: int, index: int) -> None:
-    """Select option at `index` in dropdown nth(nth) and let the page settle."""
     page.locator("select").nth(nth).select_option(index=index)
-    page.wait_for_timeout(SELECT_WAIT_MS)
+    if nth < LEAF_LEVEL:
+        next_dropdown = page.locator("select").nth(nth + 1)
+        try:
+            page.wait_for_function(
+                "(el) => el.options.length > 1",
+                arg=next_dropdown.element_handle(),
+                timeout=30_000,
+            )
+        except PWTimeout:
+            page.wait_for_timeout(3000) # fallback if networkidle times out by it swlf
+    else:
+        page.wait_for_timeout(3000)
 
 
 def _extract(page: Page) -> list[dict]:
