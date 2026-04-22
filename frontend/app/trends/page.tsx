@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import {
   LineChart,
@@ -10,7 +10,9 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts"
-import { trends } from "@/lib/api"
+import { trends, getInstitutes, getPrograms } from "@/lib/api"
+import Autocomplete from "@/components/ui/Autocomplete"
+import CustomSelect from "@/components/ui/CustomSelect"
 import { TrendPoint } from "@/lib/types"
 import Footer from "@/components/layout/Footer"
 
@@ -23,11 +25,31 @@ export default function TrendsPage() {
   const [data, setData] = useState<TrendPoint[]>([])
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
+  const [instituteList, setInstituteList] = useState<string[]>([])
+  const [programList, setProgramList] = useState<string[]>([])
+
+  // Fetch institutes dynamically. Re-run whenever *program changes.
+  useEffect(() => {
+    getInstitutes(program)
+      .then((res) => { if (res.data) setInstituteList(res.data) })
+      .catch((err) => console.error(err))
+  }, [program])
+
+  // Fetch programs dynamically. Re-run whenever *institute changes.
+  useEffect(() => {
+    getPrograms(institute)
+      .then((res) => { if (res.data) setProgramList(["ALL", ...res.data]) })
+      .catch((err) => console.error(err))
+  }, [institute])
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    const res = await trends({ institute, program, category })
+    const res = await trends({
+      institute,
+      program: program === "ALL" ? "" : program,
+      category
+    })
     const grouped: Record<string, TrendPoint> = {}
     for (const r of res.data) {
       const key = `Round ${r.round}`
@@ -53,40 +75,46 @@ export default function TrendsPage() {
 
         <form
           onSubmit={handleSearch}
-          className="glass rounded-2xl p-6 mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+          className="glass rounded-2xl p-6 mb-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative z-[50]"
         >
-          <input
-            placeholder="Institute (e.g. Bombay)"
-            value={institute}
-            onChange={(e) => setInstitute(e.target.value)}
-            className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white
-                       placeholder-gray-500 focus:border-[#00AEEF]/50 focus:outline-none"
-          />
-          <input
-            placeholder="Program (e.g. Computer Science)"
-            value={program}
-            onChange={(e) => setProgram(e.target.value)}
-            className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white
-                       placeholder-gray-500 focus:border-[#00AEEF]/50 focus:outline-none"
-          />
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white
-                       focus:border-[#00AEEF]/50 focus:outline-none"
-          >
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c} className="bg-[#050812]">{c}</option>
-            ))}
-          </select>
-          <button
-            type="submit"
-            disabled={loading}
-            className="py-3 bg-[#00AEEF] text-black font-bold rounded-xl
-                       hover:bg-[#00AEEF]/90 disabled:opacity-50 transition-all glow-blue"
-          >
-            {loading ? "Loading..." : "Analyze"}
-          </button>
+          <div className="relative z-[60]">
+             <label className="text-xs text-gray-500 mb-1 block">Institute</label>
+             <Autocomplete
+                options={instituteList}
+                value={institute}
+                onChange={setInstitute}
+                placeholder="e.g. Bombay"
+             />
+          </div>
+
+          <div className="relative z-[50]">
+             <label className="text-xs text-gray-500 mb-1 block">Program</label>
+             <Autocomplete
+                options={programList}
+                value={program}
+                onChange={setProgram}
+                placeholder="e.g. Computer Science (or ALL)"
+             />
+          </div>
+
+          <div className="relative z-[40]">
+             <CustomSelect
+                label="Category"
+                value={category}
+                onChange={setCategory}
+                options={CATEGORIES}
+             />
+          </div>
+
+          <div className="relative z-[10] flex items-end">
+             <button
+                type="submit"
+                disabled={loading || !institute}
+                className="w-full py-3 h-[50px] bg-[#00AEEF] text-black font-bold rounded-xl hover:bg-[#00AEEF]/90 disabled:opacity-50 transition-all glow-blue"
+             >
+                {loading ? "Loading..." : "Analyze"}
+             </button>
+          </div>
         </form>
 
         {searched && data.length === 0 && (
@@ -99,7 +127,7 @@ export default function TrendsPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="glass rounded-2xl p-6"
+            className="glass rounded-2xl p-6 relative z-10"
           >
             <ResponsiveContainer width="100%" height={400}>
               <LineChart data={data}>

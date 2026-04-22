@@ -4,6 +4,7 @@ import { motion } from "framer-motion"
 import { predict } from "@/lib/api"
 import { Allotment } from "@/lib/types"
 import Footer from "@/components/layout/Footer"
+import CustomSelect from "@/components/ui/CustomSelect"
 
 const CATEGORIES = ["OPEN", "EWS", "OBC-NCL", "SC", "ST"]
 const GENDERS = ["Gender-Neutral", "Female-only (including Supernumerary)"]
@@ -21,7 +22,7 @@ export default function PredictPage() {
   const [category, setCategory] = useState("OPEN")
   const [gender, setGender] = useState("Gender-Neutral")
   const [quota, setQuota] = useState("AI")
-  const [round, setRound] = useState(6)
+  const [round, setRound] = useState(1)
   const [results, setResults] = useState<Allotment[]>([])
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(false)
@@ -44,14 +45,12 @@ export default function PredictPage() {
           Enter your JEE rank to see colleges categorized as safe, target, and dream.
         </p>
 
-        <form
-          onSubmit={handleSubmit}
-          className="glass rounded-2xl p-6 mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-        >
-          <div className="lg:col-span-3">
+        <form onSubmit={handleSubmit} className="glass rounded-2xl p-6 mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Rank Inputx */}
+          <div className="lg:col-span-3 relative z-[60]">
             <input
               type="number"
-              placeholder="Enter your JEE Rank"
+              placeholder="Enter your JEE Rank...."
               value={rank}
               onChange={(e) => setRank(e.target.value)}
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3
@@ -60,56 +59,48 @@ export default function PredictPage() {
             />
           </div>
 
-          {[
-            {
-              label: "Category",
-              value: category,
-              setter: setCategory,
-              options: CATEGORIES,
-            },
-            {
-              label: "Gender",
-              value: gender,
-              setter: setGender,
-              options: GENDERS,
-            },
-            {
-              label: "Quota",
-              value: quota,
-              setter: setQuota,
-              options: QUOTAS,
-            },
-          ].map((field) => (
-            <div key={field.label}>
-              <label className="text-xs text-gray-500 mb-1 block">{field.label}</label>
-              <select
-                value={field.value}
-                onChange={(e) => field.setter(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3
-                           text-white focus:border-[#00AEEF]/50 focus:outline-none"
-              >
-                {field.options.map((o) => (
-                  <option key={o} value={o} className="bg-[#050812]">{o}</option>
-                ))}
-              </select>
-            </div>
-          ))}
-
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block">Round</label>
-            <select
-              value={round}
-              onChange={(e) => setRound(Number(e.target.value))}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3
-                         text-white focus:border-[#00AEEF]/50 focus:outline-none"
-            >
-              {ROUNDS.map((r) => (
-                <option key={r} value={r} className="bg-[#050812]">Round {r}</option>
-              ))}
-            </select>
+          {/* Category Dropdown */}
+          <div className="relative z-[50]">
+            <CustomSelect
+              label="Category"
+              value={category}
+              onChange={setCategory}
+              options={CATEGORIES}
+            />
           </div>
 
-          <div className="lg:col-span-3">
+          {/* Gender Dropdown */}
+          <div className="relative z-[40]">
+            <CustomSelect
+              label="Gender"
+              value={gender}
+              onChange={setGender}
+              options={GENDERS}
+            />
+          </div>
+
+          {/* Quota Dropdown */}
+          <div className="relative z-[30]">
+            <CustomSelect
+              label="Quota"
+              value={quota}
+              onChange={setQuota}
+              options={QUOTAS}
+            />
+          </div>
+
+          {/* Round Dropdown */}
+          <div className="relative z-[20]">
+            <CustomSelect
+              label="Round"
+              value={round.toString()}
+              onChange={(val) => setRound(Number(val))}
+              options={ROUNDS.map(String)}
+            />
+          </div>
+
+          {/* Submit Button */}
+          <div className="lg:col-span-3 mt-2 relative z-[10]">
             <button
               type="submit"
               disabled={loading || !rank}

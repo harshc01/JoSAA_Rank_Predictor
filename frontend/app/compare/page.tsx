@@ -1,167 +1,100 @@
-"use client"
-import { useState } from "react"
-import { motion } from "framer-motion"
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts"
-import { compare } from "@/lib/api"
-import { Allotment } from "@/lib/types"
-import Footer from "@/components/layout/Footer"
+"use client";
 
-const CATEGORIES = ["OPEN", "EWS", "OBC-NCL", "SC", "ST"]
+import { useState, useEffect } from "react";
+import Autocomplete from "@/components/ui/Autocomplete";
+import CustomSelect from "@/components/ui/CustomSelect";
+import { compare, getInstitutes, getPrograms } from "@/lib/api";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 export default function ComparePage() {
-  const [institute1, setInstitute1] = useState("")
-  const [institute2, setInstitute2] = useState("")
-  const [program, setProgram] = useState("")
-  const [category, setCategory] = useState("OPEN")
-  const [data, setData] = useState<Allotment[]>([])
-  const [loading, setLoading] = useState(false)
-  const [searched, setSearched] = useState(false)
+  const [instituteList, setInstituteList] = useState<string[]>([]);
+  const [programList, setProgramList] = useState<string[]>([]);
+  const [inst1, setInst1] = useState("");
+  const [inst2, setInst2] = useState("");
+  const [program, setProgram] = useState("ALL");
+  const [category, setCategory] = useState("OPEN");
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
-  async function handleCompare(e: React.FormEvent) {
-    e.preventDefault()
-    if (!institute1 || !institute2) return
-    setLoading(true)
-    const res = await compare(
-      `${institute1},${institute2}`,
-      program || undefined,
-      category
-    )
-    setData(res.data || [])
-    setSearched(true)
-    setLoading(false)
-  }
+  useEffect(() => {
+    getInstitutes().then((res) => { if (res.data) setInstituteList(res.data); });
+    getPrograms().then((res) => {
+        if (res.data) setProgramList(["ALL", ...res.data]); 
+    });
+  }, []);
 
-  const chartData = [1, 2, 3, 4, 5, 6].map((round) => {
-    const r1 = data.find(
-      (d) => d.round === round && d.institute.toLowerCase().includes(institute1.toLowerCase())
-    )
-    const r2 = data.find(
-      (d) => d.round === round && d.institute.toLowerCase().includes(institute2.toLowerCase())
-    )
-    return {
-      round: `R${round}`,
-      [institute1 || "Institute 1"]: r1 ? parseInt(r1.closing_rank) : null,
-      [institute2 || "Institute 2"]: r2 ? parseInt(r2.closing_rank) : null,
-    }
-  })
+  const handleCompare = async () => {
+    if (!inst1 || !inst2) return;
+    setLoading(true);
+    setHasSearched(true);
+    try {
+      const res = await compare(`${inst1},${inst2}`, program, category);
+      const formattedData = [1, 2, 3, 4, 5, 6].map((r) => ({ name: `R${r}` }));
+      const k1 = inst1.toLowerCase();
+      const k2 = inst2.toLowerCase();
+
+      res.data.forEach((item: any) => {
+        const rIdx = item.round - 1;
+        if (rIdx >= 0 && rIdx <= 5) {
+          const itemInst = item.institute.toLowerCase();
+          if (itemInst.includes(k1)) formattedData[rIdx][k1] = item.closing_rank;
+          else if (itemInst.includes(k2)) formattedData[rIdx][k2] = item.closing_rank;
+        }
+      });
+      setChartData(formattedData);
+    } catch (e) { console.error(e); } finally { setLoading(false); }
+  };
 
   return (
-    <main className="min-h-screen pt-24 px-6 max-w-6xl mx-auto">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-4xl font-black mb-2">Comparison Tool</h1>
-        <p className="text-gray-400 mb-8">
-          Compare closing ranks of two institutes side by side across all rounds.
-        </p>
+    <div className="min-h-screen bg-slate-950 text-slate-200 p-8 pt-24 font-sans">
+      <div className="max-w-6xl mx-auto space-y-8">
+        <div>
+          <h1 className="text-4xl font-black text-white tracking-tight mb-2">Comparison Tool</h1>
+          <p className="text-slate-400">Side-by-side analysis of institute closing ranks.</p>
+        </div>
 
-        <form
-          onSubmit={handleCompare}
-          className="glass rounded-2xl p-6 mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
-        >
-          <input
-            placeholder="Institute 1 (e.g. Bombay)"
-            value={institute1}
-            onChange={(e) => setInstitute1(e.target.value)}
-            className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white
-                       placeholder-gray-500 focus:border-[#00AEEF]/50 focus:outline-none"
-          />
-          <input
-            placeholder="Institute 2 (e.g. Delhi)"
-            value={institute2}
-            onChange={(e) => setInstitute2(e.target.value)}
-            className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white
-                       placeholder-gray-500 focus:border-[#00AEEF]/50 focus:outline-none"
-          />
-          <input
-            placeholder="Program (e.g. Computer Science)"
-            value={program}
-            onChange={(e) => setProgram(e.target.value)}
-            className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white
-                       placeholder-gray-500 focus:border-[#00AEEF]/50 focus:outline-none"
-          />
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white
-                       focus:border-[#00AEEF]/50 focus:outline-none"
-          >
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c} className="bg-[#050812]">{c}</option>
-            ))}
-          </select>
-          <div className="lg:col-span-4">
-            <button
-              type="submit"
-              disabled={loading || !institute1 || !institute2}
-              className="w-full py-3 bg-[#00AEEF] text-black font-bold rounded-xl
-                         hover:bg-[#00AEEF]/90 disabled:opacity-50 transition-all glow-blue"
-            >
-              {loading ? "Comparing..." : "Compare"}
-            </button>
+        <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800 p-8 rounded-3xl shadow-2xl space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-50">
+            <Autocomplete options={instituteList} value={inst1} onChange={setInst1} placeholder="Institute 1" />
+            <Autocomplete options={instituteList} value={inst2} onChange={setInst2} placeholder="Institute 2" />
           </div>
-        </form>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-40">
+            <Autocomplete options={programList} value={program} onChange={setProgram} placeholder="Branch (or ALL)" />
+            <CustomSelect 
+                value={category} 
+                onChange={setCategory} 
+                options={["OPEN", "OBC-NCL", "SC", "ST", "EWS"]} 
+            />
+          </div>
 
-        {searched && data.length === 0 && (
-          <div className="glass rounded-2xl p-8 text-center text-gray-400">
-            No data found. Try different filters.
+          <button
+            onClick={handleCompare}
+            disabled={loading || !inst1 || !inst2}
+            className="w-full py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-lg rounded-xl transition-all shadow-lg shadow-cyan-500/20 uppercase tracking-tighter disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? "Analyzing..." : "Compare Institutes"}
+          </button>
+        </div>
+
+        {hasSearched && chartData.length > 0 && (
+          <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800 p-8 rounded-3xl shadow-2xl h-[600px] relative z-10">
+            <h2 className="text-xl font-bold text-white mb-6">Closing Rank Comparison by Round</h2>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                <XAxis dataKey="name" stroke="#64748b" />
+                <YAxis reversed stroke="#64748b" />
+                <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px' }} itemStyle={{ color: '#e2e8f0' }} />
+                <Legend wrapperStyle={{ paddingTop: '30px' }} />
+                <Bar dataKey={inst1.toLowerCase()} fill="#06b6d4" name={inst1} radius={[6, 6, 0, 0]} />
+                <Bar dataKey={inst2.toLowerCase()} fill="#ec4899" name={inst2} radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         )}
-
-        {data.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
-          >
-            <div className="glass rounded-2xl p-6">
-              <h2 className="text-lg font-bold mb-6 text-gray-300">
-                Closing Rank Comparison by Round
-              </h2>
-              <ResponsiveContainer width="100%" height={350}>
-                <BarChart data={chartData}>
-                  <XAxis
-                    dataKey="round"
-                    stroke="#4B5563"
-                    tick={{ fill: "#9CA3AF", fontSize: 12 }}
-                  />
-                  <YAxis
-                    stroke="#4B5563"
-                    tick={{ fill: "#9CA3AF", fontSize: 12 }}
-                    reversed
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: "#0a1628",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      borderRadius: "12px",
-                      color: "#fff",
-                    }}
-                  />
-                  <Legend />
-                  <Bar
-                    dataKey={institute1 || "Institute 1"}
-                    fill="#00AEEF"
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Bar
-                    dataKey={institute2 || "Institute 2"}
-                    fill="#22d3ee"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </motion.div>
-        )}
-      </motion.div>
-      <Footer />
-    </main>
-  )
+      </div>
+    </div>
+  );
 }
