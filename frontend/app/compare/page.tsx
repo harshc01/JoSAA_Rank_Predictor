@@ -30,7 +30,7 @@ export default function ComparePage() {
     setHasSearched(true);
     try {
       const res = await compare(`${inst1},${inst2}`, program, category);
-      const formattedData = [1, 2, 3, 4, 5, 6].map((r) => ({ name: `R${r}` }));
+      const formattedData: Record<string, any>[] = [1, 2, 3, 4, 5, 6].map((r) => ({ name: `R${r}` }));
       const k1 = inst1.toLowerCase();
       const k2 = inst2.toLowerCase();
 
